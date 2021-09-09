@@ -37,3 +37,5 @@ const unsubscribe3 = myAddEventListener('click', () => {
 });
 unsubscribe2();
 myEventTrigger('click'); // 1, 2
+
+console.log(parseInt(30).toString(2));
