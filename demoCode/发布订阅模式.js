@@ -39,3 +39,9 @@ unsubscribe2();
 myEventTrigger('click'); // 1, 2
 
 console.log(parseInt(30).toString(2));
+
+function test(a = 1) {
+    console.log(a);
+}
+test((a = 2));
+console.log(a);

@@ -55,3 +55,4 @@ class Demo {
 const int = new Demo('aaa');
 Object.assign(int, { foo: 2 });
 console.log(int);
+console.log(new Set([1, 2]));
