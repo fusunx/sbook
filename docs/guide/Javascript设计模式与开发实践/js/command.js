@@ -17,3 +17,20 @@ function bindClick(button, command) {
     commandQueue.push(command)
     button.onclick = command
 }
+
+function getBit(a, b) {
+    return (a >> b) & 1
+}
+console.log(parseInt(getBit(15, 2)).toString(2));
+
+function unsetBit(a, b) {
+    return a & ~(1 << b)
+}
+
+function setBit(a, b) {
+    return a | (1 << b)
+}
+
+function flapBit(a, b) {
+    return a ^ (1 << b)
+}
