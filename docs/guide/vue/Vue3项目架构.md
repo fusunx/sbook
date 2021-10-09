@@ -1,4 +1,4 @@
-# Vue3 项目架构
+# Vue3 初始化流程
 
 ## Monorepo
 
@@ -172,10 +172,7 @@ export function createAppAPI<HostElement>(
     hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
     return function createApp(rootComponent, rootProps = null) {
-        if (rootProps != null && !isObject(rootProps)) {
-            __DEV__ && warn(`root props passed to app.mount() must be an object.`);
-            rootProps = null;
-        }
+        // 忽略参数判断
 
         const context = createAppContext();
         const installedPlugins = new Set();
@@ -201,115 +198,36 @@ export function createAppAPI<HostElement>(
                     warn(`app.config cannot be replaced. Modify individual options instead.`);
                 }
             },
+            use(plugin: Plugin, ...options: any[]) {
+                // 忽略具体实现
+                return app;
+            },
 
             mixin(mixin: ComponentOptions) {
-                if (__FEATURE_OPTIONS_API__) {
-                    if (!context.mixins.includes(mixin)) {
-                        context.mixins.push(mixin);
-                    } else if (__DEV__) {
-                        warn(
-                            'Mixin has already been applied to target app' +
-                                (mixin.name ? `: ${mixin.name}` : '')
-                        );
-                    }
-                } else if (__DEV__) {
-                    warn('Mixins are only available in builds supporting Options API');
-                }
+                // 忽略具体实现
                 return app;
             },
 
             component(name: string, component?: Component): any {
-                if (__DEV__) {
-                    validateComponentName(name, context.config);
-                }
-                if (!component) {
-                    return context.components[name];
-                }
-                if (__DEV__ && context.components[name]) {
-                    warn(`Component "${name}" has already been registered in target app.`);
-                }
-                context.components[name] = component;
+                // 忽略具体实现
                 return app;
             },
 
             directive(name: string, directive?: Directive) {
-                if (__DEV__) {
-                    validateDirectiveName(name);
-                }
-
-                if (!directive) {
-                    return context.directives[name] as any;
-                }
-                if (__DEV__ && context.directives[name]) {
-                    warn(`Directive "${name}" has already been registered in target app.`);
-                }
-                context.directives[name] = directive;
+                // 忽略具体实现
                 return app;
             },
 
             mount(rootContainer: HostElement, isHydrate?: boolean, isSVG?: boolean): any {
-                if (!isMounted) {
-                    const vnode = createVNode(rootComponent as ConcreteComponent, rootProps);
-                    // store app context on the root VNode.
-                    // this will be set on the root instance on initial mount.
-                    vnode.appContext = context;
-
-                    // HMR root reload
-                    if (__DEV__) {
-                        context.reload = () => {
-                            render(cloneVNode(vnode), rootContainer, isSVG);
-                        };
-                    }
-
-                    if (isHydrate && hydrate) {
-                        hydrate(vnode as VNode<Node, Element>, rootContainer as any);
-                    } else {
-                        render(vnode, rootContainer, isSVG);
-                    }
-                    isMounted = true;
-                    app._container = rootContainer;
-                    // for devtools and telemetry
-                    (rootContainer as any).__vue_app__ = app;
-
-                    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-                        app._instance = vnode.component;
-                        devtoolsInitApp(app, version);
-                    }
-
-                    return vnode.component!.proxy;
-                } else if (__DEV__) {
-                    warn(
-                        `App has already been mounted.\n` +
-                            `If you want to remount the same app, move your app creation logic ` +
-                            `into a factory function and create fresh app instances for each ` +
-                            `mount - e.g. \`const createMyApp = () => createApp(App)\``
-                    );
-                }
+                // 忽略具体实现
             },
 
             unmount() {
-                if (isMounted) {
-                    render(null, app._container);
-                    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-                        app._instance = null;
-                        devtoolsUnmountApp(app);
-                    }
-                    delete app._container.__vue_app__;
-                } else if (__DEV__) {
-                    warn(`Cannot unmount an app that is not mounted.`);
-                }
+                // 忽略具体实现
             },
 
             provide(key, value) {
-                if (__DEV__ && (key as string | symbol) in context.provides) {
-                    warn(
-                        `App already provides property with key "${String(key)}". ` +
-                            `It will be overwritten with the new value.`
-                    );
-                }
-                // TypeScript doesn't allow symbols as index type
-                // https://github.com/Microsoft/TypeScript/issues/24587
-                context.provides[key as string] = value;
+                // 忽略具体实现
 
                 return app;
             },
@@ -329,7 +247,7 @@ export function createAppAPI<HostElement>(
 
 看一下这个函数做了些啥事。
 
-首先创建了一个 context，这个 context 是一个默认对象。
+首先创建了一个 context，这个 context 是一个默认对象，即应用上下文。
 
 ```ts
 {
@@ -363,43 +281,54 @@ isMounted 表示 app 是否挂载。
 
 第一个是 use 函数。
 
-```ts
-use(plugin: Plugin, ...options: any[]) {
-    if (installedPlugins.has(plugin)) {
-        __DEV__ && warn(`Plugin has already been applied to target app.`);
-    } else if (plugin && isFunction(plugin.install)) {
-        installedPlugins.add(plugin);
-        plugin.install(app, ...options);
-    } else if (isFunction(plugin)) {
-        installedPlugins.add(plugin);
-        plugin(app, ...options);
-    } else if (__DEV__) {
-        warn(
-            `A plugin must either be a function or an object with an "install" ` +
-                `function.`
-        );
-    }
-    return app;
-},
-```
-
 app.use 用于注册全局插件。逻辑非常简单。首先判断当前插件是否已经被注册过，注册过则忽略，否则判断当前插件是否存在 install 函数，存在则调用 plugin.install(app, ...options),并将插件缓存，否则判断当前插件是否为函数，是则直接执行并缓存，否则忽略。最后返回 app 实例。
 
 app.mixin 则是将 mixin 缓存。app.component 和 app.directive 同理。
 
-重点是 mount 函数。mount 函数干了这么几件事。
+## mount
 
-1. 生成 VNode
-2. 在根 VNode 上存储上下文
-3. 渲染 VNode
-4. 修改 isMounted 状态
-5. 缓存根组件
-6. 返回组件代理
+回到 vue3 项目中创建一个 Vue 实例。
+
+```js
+createApp(APP).mount('#app)
+```
+
+由前文可知，createApp 函数返回的是一个 Vue 实例。现在我们就来看看创建 Vue 实例时 mount 流程。
+
+1. Vue 实例上挂载的 mount 函数，位于 runtime-dom/index.ts
+2. mount 函数，位于 runtime-core/src/apiCreateApp.ts 下 createAppAPI 函数中
+
+第一个 mount 函数其实是对第二个 mount 函数执行前做了一些容器的初始化工作和条件判断，第二个 mount 函数则是真正的挂载函数流程，我们主要看第二个 mount 函数。
+
+1. 执行 createVNode 函数生成 vnode，位于 runtime-core/src/vnode.ts
+2. 执行 render 函数，位于 runtime-core/src/renderer.ts
+3. 修改 mounted 状态，缓存 rootContainer
+4. 返回 vnode 组件代理
+
+我们先跳过 createVNode 函数的具体实现，只需要知道这个函数返回的是一个 vnode 对象。进入 render 函数。
+
+这个 render 函数是在 baseCreateRenderer 函数中定义的，这个函数在 createApp 函数的流程中执行，我们这里的 render 函数是 baseCreateRenderer 函数的闭包。
+
+在这个函数中除了 render 函数还定义了其它的功能函数。
+
+render 函数接收三个参数:
+
+-   vnode: 虚拟 DOM
+-   container: 容器
+-   isSVG: 是否为 SVG
+
+render 函数做的事情很简单
+
+<div align=center><img src="../../imgs/render.png"></div>
+
+render 函数 首先会对 vnode 做判断，如果 vnode 为 null，则说明新的虚拟 DOM 为空，则只需要执行 unmount 将老的内容从页面卸载。如果不为空，则进入 patch 流程。patch 结束后，执行 flushPostFlushCbs 函数，最后将 vnode 缓存在 container 上。
 
 ## 小结
 
-这个流程中 createAppAPI 函数只是返回了一个函数，并赋值给 baseCreateRenderer 函数的返回值，这个时候 baseCreateRenderer 函数的返回值为{
-render,
-hydrate,
-createApp: createAppAPI(render, hydrate)
-} ， 这个函数并没有被执行。最后返回给 renderer。然后再调用 renderer.createApp 生成 app 实例。
+这个流程中 createAppAPI 函数只是返回了一个函数，并赋值给 baseCreateRenderer 函数的返回值，这个时候 baseCreateRenderer 函数的返回值为
+
+-   render,
+-   hydrate,
+-   createApp: createAppAPI(render, hydrate)
+
+这个函数并没有被执行。最后返回给 renderer。然后再调用 renderer.createApp 生成 app 实例。
